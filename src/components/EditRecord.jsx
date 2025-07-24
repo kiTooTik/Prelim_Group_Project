@@ -1,80 +1,112 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import './cssStyles/CrudForms.css';
 
-export default function EditRecord({ record, onUpdate }) {
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
+
+export default function EditRecord({ record, onRecordUpdated, onCancel }) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    department: ''
+    name: record?.name || '',
+    email: record?.email || '',
+    department: record?.department || ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (record) {
-      setFormData({
-        name: record.name,
-        email: record.email,
-        department: record.department
-      });
-    }
-  }, [record]);
+  if (!record) {
+    return <div className="crud-form-container">No record selected.</div>;
+  }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.name && formData.email && formData.department) {
-      onUpdate({
-        ...record,
-        ...formData
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Update main record
+      const res = await fetch(`${API_BASE}/api/records/${record.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
       });
-    } else {
-      alert('Please fill in all fields');
+
+      const updated = await res.json();
+      if (!res.ok) {
+        alert(updated.error || 'Failed to update record');
+        return;
+      }
+
+      // Log EDIT
+      try {
+        await fetch(`${API_BASE}/api/edit-record/${record.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            name: formData.name,
+            department: formData.department
+          })
+        });
+      } catch (err) {
+        console.warn('Failed to log EDIT action', err);
+      }
+
+      // Notify dashboard
+      if (typeof onRecordUpdated === 'function') {
+        await onRecordUpdated(updated);
+      }
+    } catch (err) {
+      alert('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [e.target.name]: e.target.value
-    });
+    }));
   };
-
-  if (!record) {
-    return (
-      <div className="crud-form-container">
-        <h2>Edit Record</h2>
-        <p>Please select a record to edit from the Report page.</p>
-      </div>
-    );
-  }
 
   return (
     <div className="crud-form-container">
-      <h2>Edit Record (ID: {record.id})</h2>
+      <h2>Edit Record #{record.id}</h2>
       <form onSubmit={handleSubmit} className="crud-form">
         <div className="form-group">
           <label htmlFor="name">Name:</label>
           <input
-            type="text"
             id="name"
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
+            disabled={submitting}
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="email">Email:</label>
           <input
-            type="email"
             id="email"
             name="email"
+            type="email"
             value={formData.email}
             onChange={handleChange}
             required
+            disabled={submitting}
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="department">Department:</label>
           <select
@@ -83,6 +115,7 @@ export default function EditRecord({ record, onUpdate }) {
             value={formData.department}
             onChange={handleChange}
             required
+            disabled={submitting}
           >
             <option value="">Select Department</option>
             <option value="IT">IT</option>
@@ -92,8 +125,17 @@ export default function EditRecord({ record, onUpdate }) {
             <option value="Operations">Operations</option>
           </select>
         </div>
-        
-        <button type="submit" className="submit-btn">Update Record</button>
+
+        <div className="form-actions">
+          <button type="submit" className="submit-btn" disabled={submitting}>
+          {submitting ? 'Saving...' : 'Save'}
+          </button>
+          {onCancel && (
+            <button type="button" className="submit-btn" onClick={onCancel} disabled={submitting}>
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

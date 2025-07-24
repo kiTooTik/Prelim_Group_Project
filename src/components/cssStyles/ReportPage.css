@@ -78,3 +78,14 @@
 .department-breakdown {
   margin-top: 1rem;
 }
+
+.refresh-btn {
+  margin-left: auto;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.report-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
