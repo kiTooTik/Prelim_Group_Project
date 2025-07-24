@@ -1,36 +1,47 @@
-// LogsHistory.jsx
 import React, { useEffect, useState } from 'react';
-import './LogsHistory.css'; 
+import './cssStyles/LogsHistory.css';
+
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
 
 export default function LogsHistory() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch('/api/logs', {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setLogs(data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch logs:', err);
-        setLoading(false);
+  const fetchLogs = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/logs`, {
+        headers: { Authorization: `Bearer ${token}` }
       });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Failed to fetch logs');
+        return;
+      }
+      setLogs(data);
+    } catch (e) {
+      console.error('Failed to fetch logs:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLogs();
   }, []);
 
-  return (
-    <div className="logs-history-container">
-      <h2>History Logs</h2>
+  if (loading) return <p>Loading logs...</p>;
 
-      {loading ? (
-        <p>Loading...</p>
-      ) : logs.length === 0 ? (
-        <p>No logs found.</p>
+  return (
+    <div className="logs-container">
+      <h2>Activity Logs</h2>
+      {logs.length === 0 ? (
+        <p>No logs available.</p>
       ) : (
         <table className="logs-table">
           <thead>
@@ -44,19 +55,20 @@ export default function LogsHistory() {
             </tr>
           </thead>
           <tbody>
-            {logs.map((log) => (
+            {logs.map(log => (
               <tr key={log.id}>
                 <td>{log.id}</td>
                 <td>{log.user_id}</td>
                 <td>{log.name}</td>
                 <td>{log.department}</td>
                 <td>{log.action}</td>
-                <td>{new Date(log.timestamp).toLocaleString()}</td>
+                <td>{log.timestamp}</td>
               </tr>
             ))}
           </tbody>
         </table>
       )}
+      <button className="refresh-btn" onClick={fetchLogs}>↻ Refresh</button>
     </div>
   );
 }
