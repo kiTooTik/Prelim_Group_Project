@@ -1,4 +1,3 @@
-
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt');
@@ -14,11 +13,35 @@ const JWT_SECRET = 'your-secret-key-change-in-production';
 app.use(cors());
 app.use(express.json());
 
+// Middleware to verify JWT token
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ error: 'Access token required' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Invalid or expired token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
 // Initialize SQLite database
-const db = new sqlite3.Database('./users.db');
+const db = new sqlite3.Database('./crudDB.db');
+
 
 // Create users table if it doesn't exist
 db.serialize(() => {
+
+  // Foreign Keys for CRUD History. If you are reading this and searching for an issue to fix, 
+  // you can create another page which shows the record history.
+  db.run('PRAGMA foreign_keys = ON');
+
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -31,6 +54,18 @@ db.serialize(() => {
   const defaultPassword = bcrypt.hashSync('admin123', 10);
   db.run(`INSERT OR IGNORE INTO users (username, email, password) 
           VALUES ('admin', 'admin@example.com', ?)`, [defaultPassword]);
+
+  // Records table
+  db.run(`CREATE TABLE IF NOT EXISTS records (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    department TEXT NOT NULL,
+    user_id INTEGER,                                -- This is the Foreign key. Using this we would be able to see the creator of the record
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+  )`);
+
 });
 
 // Register endpoint
@@ -70,6 +105,80 @@ app.post('/api/register', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+// Fetch all records (protected route)
+app.get('/api/records', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM records', [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+
+app.post('/api/records', authenticateToken, (req, res) => {
+  const { name, email, department} = req.body;
+
+  if (!name || !email || !department) {
+    return res.status(400).json({ error: 'name, email, and department are required'});
+  }
+
+  db.run(
+    'INSERT INTO records (name, email, department, user_id) VALUES (?, ?, ?, ?)',
+    [name, email, department, req.user.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message});
+
+      res.status(201).json({
+        id: this.lastID,
+        name,
+        email,
+        department,
+        user_id: req.user.userId
+      });
+    }
+  );
+});
+
+app.put('/api/records/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+  const { name, email, department } = req.body;
+
+  if (!name || !email || !department) {
+    return res.status(400).json({ error: 'name, email, and department are required'});
+  }
+
+  db.run(
+    `UPDATE records SET name = ?, email = ?, department = ? WHERE id = ?`,
+    [name, email, department, id],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      if (this.changes === 0) return res.status(404).json({ error: 'Record not found' });
+
+      res.json({ id, name, email, department });
+    }
+  );
+});
+
+app.delete('/api/records/:id', authenticateToken, (req, res) => {
+  const { id } = req.params;
+
+  db.run(
+    'DELETE FROM records WHERE id = ? AND user_id = ?',
+    [id, req.user.userId],
+    function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+
+      if (this.changes === 0) {
+        return res.status(404).json({ error: 'Record not found or not authorized' });
+      }
+
+      res.status(204).send();
+    }
+  );
+});
+
 
 // Login endpoint
 app.post('/api/login', (req, res) => {
@@ -116,23 +225,7 @@ app.post('/api/login', (req, res) => {
   );
 });
 
-// Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
-};
 
 // Protected route example
 app.get('/api/profile', authenticateToken, (req, res) => {

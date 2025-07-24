@@ -1,6 +1,7 @@
-
 import React, { useState } from 'react';
-import './CrudForms.css';
+import './cssStyles/CrudForms.css';
+
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
 
 export default function AddRecord({ onAdd }) {
   const [formData, setFormData] = useState({
@@ -8,14 +9,50 @@ export default function AddRecord({ onAdd }) {
     email: '',
     department: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.name && formData.email && formData.department) {
-      onAdd(formData);
-      setFormData({ name: '', email: '', department: '' });
-    } else {
+
+    if (!formData.name || !formData.email || !formData.department) {
       alert('Please fill in all fields');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('You must be logged in.');
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      const res = await fetch(`${API_BASE}/api/records`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to add record');
+        return;
+      }
+
+      // Let parent update its list, if provided
+      if (typeof onAdd === 'function') {
+        onAdd(data);
+      }
+
+      setFormData({ name: '', email: '', department: '' });
+    } catch (err) {
+      alert('Network error. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -39,9 +76,10 @@ export default function AddRecord({ onAdd }) {
             value={formData.name}
             onChange={handleChange}
             required
+            disabled={submitting}
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="email">Email:</label>
           <input
@@ -51,17 +89,19 @@ export default function AddRecord({ onAdd }) {
             value={formData.email}
             onChange={handleChange}
             required
+            disabled={submitting}
           />
         </div>
-        
+
         <div className="form-group">
           <label htmlFor="department">Department:</label>
           <select
-            id="department"
-            name="department"
-            value={formData.department}
-            onChange={handleChange}
-            required
+          id="department"
+          name="department"
+          value={formData.department}
+          onChange={handleChange}
+          required
+          disabled={submitting}
           >
             <option value="">Select Department</option>
             <option value="IT">IT</option>
@@ -71,8 +111,10 @@ export default function AddRecord({ onAdd }) {
             <option value="Operations">Operations</option>
           </select>
         </div>
-        
-        <button type="submit" className="submit-btn">Add Record</button>
+
+        <button type="submit" className="submit-btn" disabled={submitting}>
+          {submitting ? 'Saving...' : 'Add Record'}
+        </button>
       </form>
     </div>
   );

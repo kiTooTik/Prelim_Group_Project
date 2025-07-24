@@ -1,6 +1,6 @@
 
 import React from 'react';
-import './ReportPage.css';
+import './cssStyles/ReportPage.css';
 
 export default function ReportPage({ records, onEdit }) {
   return (

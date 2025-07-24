@@ -1,6 +1,6 @@
 
 import React from 'react';
-import './LandingPage.css';
+import './cssStyles/LandingPage.css';
 
 export default function LandingPage({ onNavigateToLogin }) {
   return (

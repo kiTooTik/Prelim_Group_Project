@@ -1,22 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import AddRecord from './AddRecord';
 import EditRecord from './EditRecord';
 import DeleteRecord from './DeleteRecord';
 import ReportPage from './ReportPage';
-import './Dashboard.css';
+import './cssStyles/Dashboard.css';
 
 export default function Dashboard({ user, onLogout }) {
   const [currentView, setCurrentView] = useState('report');
-  const [records, setRecords] = useState([]); // Start with empty array
+  const [records, setRecords] = useState([]);
   const [editingRecord, setEditingRecord] = useState(null);
+  const fetchedOnce = React.useRef(false);
+  const [loading, setLoading] = useState(true);
 
-  const addRecord = (record) => {
-    const newRecord = {
-      ...record,
-      id: records.length > 0 ? Math.max(...records.map(r => r.id)) + 1 : 1
-    };
-    setRecords([...records, newRecord]);
+  // Fetch records from backend
+  const fetchRecords = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${window.location.protocol}//${window.location.hostname}:5000/api/records`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await response.json();
+      setRecords(data);
+    } catch (error) {
+      console.error('Failed to fetch records:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (fetchedOnce.current) return;
+    fetchedOnce.current = true;
+    fetchRecords();
+  }, []);
+
+  const addRecord = async (record) => {
+    // No POST here. AddRecord already does the POST.
+    await fetchRecords(); // Refresh list
     setCurrentView('report');
   };
 
@@ -28,8 +48,26 @@ export default function Dashboard({ user, onLogout }) {
     setCurrentView('report');
   };
 
-  const deleteRecord = (id) => {
-    setRecords(records.filter(record => record.id !== id));
+  const deleteRecord = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(
+        `${window.location.protocol}//${window.location.hostname}:5000/api/records/${id}`,
+        {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (response.ok) {
+        setRecords(records.filter(record => record.id !== id));
+      } else {
+        const errorData = await response.json();
+        alert(errorData.error || 'Failed to delete record');
+      }
+    } catch (error) {
+      console.error('Failed to delete record:', error);
+    }
   };
 
   const handleEdit = (record) => {

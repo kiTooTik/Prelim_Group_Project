@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import './LoginPage.css';
+import './cssStyles/LoginPage.css';
 
 export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
   const [credentials, setCredentials] = useState({

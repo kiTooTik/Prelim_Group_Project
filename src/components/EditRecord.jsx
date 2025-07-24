@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import './CrudForms.css';
+import './cssStyles/CrudForms.css';
 
 export default function EditRecord({ record, onUpdate }) {
   const [formData, setFormData] = useState({
