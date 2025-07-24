@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
+import ReportPage from './ReportPage';
 import AddRecord from './AddRecord';
 import EditRecord from './EditRecord';
 import DeleteRecord from './DeleteRecord';
-import ReportPage from './ReportPage';
 import LogsHistory from './LogsHistory';
 import './cssStyles/Dashboard.css';
+
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
 
 export default function Dashboard({ user, onLogout }) {
   const [currentView, setCurrentView] = useState('report');
   const [records, setRecords] = useState([]);
   const [editingRecord, setEditingRecord] = useState(null);
-  const fetchedOnce = React.useRef(false);
-  const [loading, setLoading] = useState(true);
 
-  // Fetch records from backend
+  // Fetch records
   const fetchRecords = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${window.location.protocol}//${window.location.hostname}:5000/api/records`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const response = await fetch(`${API_BASE}/api/records`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await response.json();
       setRecords(data);
     } catch (error) {
@@ -30,62 +29,22 @@ export default function Dashboard({ user, onLogout }) {
   };
 
   useEffect(() => {
-    if (fetchedOnce.current) return;
-    fetchedOnce.current = true;
     fetchRecords();
   }, []);
-
-  const addRecord = async (record) => {
-    // No POST here. AddRecord already does the POST.
-    await fetchRecords(); // Refresh list
-    setCurrentView('report');
-  };
-
-  const updateRecord = (updatedRecord) => {
-    setRecords(records.map(record => 
-      record.id === updatedRecord.id ? updatedRecord : record
-    ));
-    setEditingRecord(null);
-    setCurrentView('report');
-  };
-
-  const deleteRecord = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${window.location.protocol}//${window.location.hostname}:5000/api/records/${id}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      if (response.ok) {
-        setRecords(records.filter(record => record.id !== id));
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'Failed to delete record');
-      }
-    } catch (error) {
-      console.error('Failed to delete record:', error);
-    }
-  };
 
   const handleEdit = (record) => {
     setEditingRecord(record);
     setCurrentView('edit');
   };
 
-
-  //lusung
   const renderContent = () => {
     switch (currentView) {
       case 'add':
-        return <AddRecord onAdd={addRecord} />;
+        return <AddRecord onRecordAdded={fetchRecords} />;
       case 'edit':
-        return <EditRecord record={editingRecord} onUpdate={updateRecord} />;
+        return <EditRecord record={editingRecord} onRecordUpdated={fetchRecords} onCancel={() => setCurrentView('report')} />;
       case 'delete':
-        return <DeleteRecord records={records} onDelete={deleteRecord} />;
+        return <DeleteRecord records={records} onRecordDeleted={fetchRecords} />;
       case 'logs':
         return <LogsHistory />;
       case 'report':
@@ -94,12 +53,11 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
-
   return (
     <div className="dashboard">
-      <Sidebar 
+      <Sidebar
         currentView={currentView}
-        onViewChange={setCurrentView}  
+        onViewChange={setCurrentView}
         user={user}
         onLogout={onLogout}
       />
