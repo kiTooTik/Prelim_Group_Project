@@ -7,7 +7,8 @@ export default function Sidebar({ currentView, onViewChange, user, onLogout }) {
     { id: 'add', label: 'ADD', icon: '➕' },
     { id: 'edit', label: 'EDIT', icon: '✏️' },
     { id: 'delete', label: 'DELETE', icon: '🗑️' },
-    { id: 'report', label: 'REPORT', icon: '📊' }
+    { id: 'report', label: 'REPORT', icon: '📊' },
+    { id: 'logs', label: 'LOGS', icon: '📜' }
   ];
 
   return (

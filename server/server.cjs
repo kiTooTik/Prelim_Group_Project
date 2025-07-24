@@ -50,6 +50,16 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
+  // Logs table lusung
+  db.run(`CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    name TEXT,
+    department TEXT,
+    action TEXT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
   // Create a default admin user (password: admin123)
   const defaultPassword = bcrypt.hashSync('admin123', 10);
   db.run(`INSERT OR IGNORE INTO users (username, email, password) 
@@ -237,6 +247,97 @@ app.get('/api/profile', authenticateToken, (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
       res.json(user);
+    }
+  );
+});
+
+// Get all history logs (lusung)
+app.get('/api/logs', authenticateToken, (req, res) => {
+  db.all(`SELECT * FROM logs ORDER BY timestamp DESC`, [], (err, rows) => {
+    if (err) {
+      console.error('Error fetching logs:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch logs' });
+    }
+
+    res.json(rows);
+  });
+});
+
+// Add record and log the ADD action. lusung
+app.post('/api/add-record', authenticateToken, (req, res) => {
+  const { name, department } = req.body;
+  const userId = req.user.userId;
+
+  if (!name || !department) {
+    return res.status(400).json({ error: 'Name and department are required' });
+  }
+
+  db.run(
+    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
+    [userId, name, department, 'ADD'],
+    function (err) {
+      if (err) {
+        console.error('Log insert error:', err.message);
+        return res.status(500).json({ error: 'Database error while logging' });
+      }
+
+      return res.status(201).json({
+        message: 'Record added and log saved',
+        logId: this.lastID,
+      });
+    }
+  );
+});
+
+
+// Edit record and log the EDIT action (lusung)
+app.put('/api/edit-record/:id', authenticateToken, (req, res) => {
+  const { name, department } = req.body;
+  const userId = req.user.userId;
+
+  if (!name || !department) {
+    return res.status(400).json({ error: 'Name and department are required' });
+  }
+
+  db.run(
+    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
+    [userId, name, department, 'EDIT'],
+    function (err) {
+      if (err) {
+        console.error('Log insert error:', err.message);
+        return res.status(500).json({ error: 'Database error while logging' });
+      }
+
+      res.status(200).json({
+        message: 'Record edited and log saved',
+        logId: this.lastID,
+      });
+    }
+  );
+});
+
+// Delete record and log the DELETE action (lusung)
+app.delete('/api/delete-record/:id', authenticateToken, (req, res) => {
+  const { name, department } = req.body;
+  const userId = req.user.userId;
+
+  if (!name || !department) {
+    return res.status(400).json({ error: 'Name and department are required' });
+  }
+
+  db.run(
+    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
+    [userId, name, department, 'DELETE'],
+    function (err) {
+      if (err) {
+        console.error('Log insert error:', err.message);
+        return res.status(500).json({ error: 'Database error while logging' });
+      }
+
+      res.status(200).json({
+        message: 'Record deleted and log saved',
+        logId: this.lastID,
+      });
     }
   );
 });

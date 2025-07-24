@@ -4,6 +4,7 @@ import AddRecord from './AddRecord';
 import EditRecord from './EditRecord';
 import DeleteRecord from './DeleteRecord';
 import ReportPage from './ReportPage';
+import LogsHistory from './LogsHistory';
 import './cssStyles/Dashboard.css';
 
 export default function Dashboard({ user, onLogout }) {
@@ -75,6 +76,8 @@ export default function Dashboard({ user, onLogout }) {
     setCurrentView('edit');
   };
 
+
+  //lusung
   const renderContent = () => {
     switch (currentView) {
       case 'add':
@@ -83,17 +86,20 @@ export default function Dashboard({ user, onLogout }) {
         return <EditRecord record={editingRecord} onUpdate={updateRecord} />;
       case 'delete':
         return <DeleteRecord records={records} onDelete={deleteRecord} />;
+      case 'logs':
+        return <LogsHistory />;
       case 'report':
       default:
         return <ReportPage records={records} onEdit={handleEdit} />;
     }
   };
 
+
   return (
     <div className="dashboard">
       <Sidebar 
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={setCurrentView}  
         user={user}
         onLogout={onLogout}
       />
