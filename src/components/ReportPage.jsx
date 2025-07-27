@@ -7,6 +7,10 @@ export default function ReportPage({ onEdit }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Add state for filtering and searching
+  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
   const fetchRecords = async () => {
     const token = localStorage.getItem('token');
     try {
@@ -30,7 +34,17 @@ export default function ReportPage({ onEdit }) {
     fetchRecords();
   }, []);
 
-  const departmentBreakdown = records.reduce((acc, r) => {
+  // Filtering logic
+  const filteredRecords = records.filter(record => {
+    const matchesDepartment =
+      !departmentFilter || record.department === departmentFilter;
+    const matchesSearch =
+      record.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.email.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesDepartment && matchesSearch;
+  });
+
+  const departmentBreakdown = filteredRecords.reduce((acc, r) => {
     acc[r.department] = (acc[r.department] || 0) + 1;
     return acc;
   }, {});
@@ -51,7 +65,29 @@ export default function ReportPage({ onEdit }) {
         <button className="refresh-btn" onClick={fetchRecords}>↻ Refresh</button>
       </div>
 
-      {records.length === 0 ? (
+      {/* Filter and Search Controls */}
+      <div className="report-controls" style={{ marginBottom: 16 }}>
+        <input
+          type="text"
+          placeholder="Search by name or email"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          style={{ marginRight: 8 }}
+        />
+        <select
+          value={departmentFilter}
+          onChange={e => setDepartmentFilter(e.target.value)}
+        >
+          <option value="">All Departments</option>
+          <option value="IT">IT</option>
+          <option value="HR">HR</option>
+          <option value="Finance">Finance</option>
+          <option value="Marketing">Marketing</option>
+          <option value="Operations">Operations</option>
+        </select>
+      </div>
+
+      {filteredRecords.length === 0 ? (
         <p>No records available. Add some records to see them here.</p>
       ) : (
         <div className="table-container">
@@ -66,7 +102,7 @@ export default function ReportPage({ onEdit }) {
               </tr>
             </thead>
             <tbody>
-              {records.map(record => (
+              {filteredRecords.map(record => (
                 <tr key={record.id}>
                   <td>{record.id}</td>
                   <td>{record.name}</td>
@@ -88,15 +124,15 @@ export default function ReportPage({ onEdit }) {
           </table>
 
           <div className="report-summary">
-          <h3>Summary</h3>
-          <p>Total Records: {records.length}</p>
-          <div className="department-breakdown">
-            <h4>Department Breakdown:</h4>
-            {Object.entries(departmentBreakdown).map(([dept, count]) => (
-              <p key={dept}>{dept}: {count}</p>
-            ))}
+            <h3>Summary</h3>
+            <p>Total Records: {filteredRecords.length}</p>
+            <div className="department-breakdown">
+              <h4>Department Breakdown:</h4>
+              {Object.entries(departmentBreakdown).map(([dept, count]) => (
+                <p key={dept}>{dept}: {count}</p>
+              ))}
+            </div>
           </div>
-        </div>
         </div>
       )}
     </div>
