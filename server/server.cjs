@@ -90,11 +90,11 @@ app.post('/api/register', async (req, res) => {
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     db.run(
       'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
       [username, email, hashedPassword],
-      function(err) {
+      function (err) {
         if (err) {
           console.log('Database error:', err.message);
           if (err.message.includes('UNIQUE constraint failed')) {
@@ -102,9 +102,9 @@ app.post('/api/register', async (req, res) => {
           }
           return res.status(500).json({ error: 'Database error' });
         }
-        
+
         const token = jwt.sign({ userId: this.lastID, username }, JWT_SECRET, { expiresIn: '24h' });
-        res.status(201).json({ 
+        res.status(201).json({
           message: 'User created successfully',
           token,
           user: { id: this.lastID, username, email }
@@ -128,17 +128,25 @@ app.get('/api/records', authenticateToken, (req, res) => {
 
 
 app.post('/api/records', authenticateToken, (req, res) => {
-  const { name, email, department} = req.body;
+  const { name, email, department } = req.body;
 
   if (!name || !email || !department) {
-    return res.status(400).json({ error: 'name, email, and department are required'});
+    return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
   db.run(
     'INSERT INTO records (name, email, department, user_id) VALUES (?, ?, ?, ?)',
     [name, email, department, req.user.userId],
     function (err) {
-      if (err) return res.status(500).json({ error: err.message});
+      if (err) return res.status(500).json({ error: err.message });
+
+      db.run(
+        `INSERT INTO logs (user_id, name, email, department, action) VALUES (?, ?, ?, ?, ?)`,
+        [req.user.userId, name, email, department, 'ADD'],
+        (logErr) => {
+          if (logErr) console.error('Log insert error:', logErr.message);
+        }
+      );
 
       res.status(201).json({
         id: this.lastID,
@@ -156,7 +164,7 @@ app.put('/api/records/:id', authenticateToken, (req, res) => {
   const { name, email, department } = req.body;
 
   if (!name || !email || !department) {
-    return res.status(400).json({ error: 'name, email, and department are required'});
+    return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
   db.run(
@@ -165,6 +173,14 @@ app.put('/api/records/:id', authenticateToken, (req, res) => {
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Record not found' });
+
+      db.run(
+        `INSERT INTO logs (user_id, name, email, department, action) VALUES (?, ?, ?, ?, ?)`,
+        [req.user.userId, name, email, department, 'EDIT'],
+        (logErr) => {
+          if (logErr) console.error('Log insert error:', logErr.message);
+        }
+      );
 
       res.json({ id, name, email, department });
     }
@@ -212,7 +228,7 @@ app.post('/api/login', (req, res) => {
 
       try {
         const isValidPassword = await bcrypt.compare(password, user.password);
-        
+
         if (!isValidPassword) {
           return res.status(401).json({ error: 'Invalid credentials' });
         }
@@ -251,9 +267,26 @@ app.get('/api/profile', authenticateToken, (req, res) => {
   );
 });
 
-// Get all history logs (lusung)
+// Get all history logs 
+// app.get('/api/logs', authenticateToken, (req, res) => {
+//   db.all(`SELECT * FROM logs ORDER BY timestamp DESC`, [], (err, rows) => {
+//     if (err) {
+//       console.error('Error fetching logs:', err.message);
+//       return res.status(500).json({ error: 'Failed to fetch logs' });
+//     }
+
+//     res.json(rows);
+//   });
+// });
+
+// Get all history logs with user email
 app.get('/api/logs', authenticateToken, (req, res) => {
-  db.all(`SELECT * FROM logs ORDER BY timestamp DESC`, [], (err, rows) => {
+  db.all(`
+    SELECT logs.*, users.email 
+    FROM logs 
+    LEFT JOIN users ON logs.user_id = users.id
+    ORDER BY logs.timestamp DESC
+  `, [], (err, rows) => {
     if (err) {
       console.error('Error fetching logs:', err.message);
       return res.status(500).json({ error: 'Failed to fetch logs' });
@@ -263,7 +296,7 @@ app.get('/api/logs', authenticateToken, (req, res) => {
   });
 });
 
-// Add record and log the ADD action. lusung
+// Add record and log the ADD action.
 app.post('/api/add-record', authenticateToken, (req, res) => {
   const { name, department } = req.body;
   const userId = req.user.userId;
