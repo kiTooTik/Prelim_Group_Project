@@ -34,14 +34,10 @@ const authenticateToken = (req, res, next) => {
 // Initialize SQLite database
 const db = new sqlite3.Database('./crudDB.db');
 
-
-// Create users table if it doesn't exist
 db.serialize(() => {
-
-  // Foreign Keys for CRUD History. If you are reading this and searching for an issue to fix, 
-  // you can create another page which shows the record history.
   db.run('PRAGMA foreign_keys = ON');
 
+  // Users table
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -50,20 +46,17 @@ db.serialize(() => {
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 
-  // Logs table lusung
+  // Logs table
   db.run(`CREATE TABLE IF NOT EXISTS logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER,
-    name TEXT,
-    department TEXT,
-    action TEXT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    user_id INTEGER NOT NULL,        -- admin/user who did the action
+    employee_name TEXT NOT NULL,     -- employee affected
+    employee_email TEXT NOT NULL,    -- employee email affected
+    department TEXT NOT NULL,
+    action TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
-
-  // Create a default admin user (password: admin123)
-  const defaultPassword = bcrypt.hashSync('admin123', 10);
-  db.run(`INSERT OR IGNORE INTO users (username, email, password) 
-          VALUES ('admin', 'admin@example.com', ?)`, [defaultPassword]);
 
   // Records table
   db.run(`CREATE TABLE IF NOT EXISTS records (
@@ -71,40 +64,65 @@ db.serialize(() => {
     name TEXT NOT NULL,
     email TEXT NOT NULL,
     department TEXT NOT NULL,
-    user_id INTEGER,                                -- This is the Foreign key. Using this we would be able to see the creator of the record
+    user_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
   )`);
 
+  // Default admin user
+  const defaultPassword = bcrypt.hashSync('admin123', 10);
+  db.run(
+    `INSERT OR IGNORE INTO users (username, email, password) 
+     VALUES ('admin', 'admin@example.com', ?)`,
+    [defaultPassword]
+  );
+
+  // Indexes for logs
+  db.run(`CREATE INDEX IF NOT EXISTS idx_logs_user_id ON logs(user_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)`);
 });
+
+// Utility function to log actions
+function logAction(userId, name, email, department, action) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      `INSERT INTO logs (user_id, employee_name, employee_email, department, action)
+       VALUES (?, ?, ?, ?, ?)`,
+      [userId, name, email, department, action],
+      function (err) {
+        if (err) {
+          console.error('Log insert error:', err.message);
+          reject(err);
+        } else {
+          resolve(this.lastID);
+        }
+      }
+    );
+  });
+}
 
 // Register endpoint
 app.post('/api/register', async (req, res) => {
-  console.log('Registration attempt:', { username: req.body.username, email: req.body.email });
   const { username, email, password } = req.body;
-
   if (!username || !email || !password) {
-    console.log('Missing required fields');
     return res.status(400).json({ error: 'All fields are required' });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-    
     db.run(
       'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
       [username, email, hashedPassword],
-      function(err) {
+      function (err) {
         if (err) {
-          console.log('Database error:', err.message);
           if (err.message.includes('UNIQUE constraint failed')) {
             return res.status(400).json({ error: 'Username or email already exists' });
           }
           return res.status(500).json({ error: 'Database error' });
         }
-        
+
         const token = jwt.sign({ userId: this.lastID, username }, JWT_SECRET, { expiresIn: '24h' });
-        res.status(201).json({ 
+        res.status(201).json({
           message: 'User created successfully',
           token,
           user: { id: this.lastID, username, email }
@@ -116,30 +134,87 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-// Fetch all records (protected route)
-app.get('/api/records', authenticateToken, (req, res) => {
-  db.all('SELECT * FROM records', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
+// Login endpoint
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, user) => {
+    if (err) return res.status(500).json({ error: 'Database error' });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+    try {
+      const isValidPassword = await bcrypt.compare(password, user.password);
+      if (!isValidPassword) return res.status(401).json({ error: 'Invalid credentials' });
+
+      const token = jwt.sign(
+        { userId: user.id, username: user.username },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.json({
+        message: 'Login successful',
+        token,
+        user: { id: user.id, username: user.username, email: user.email }
+      });
+    } catch (error) {
+      res.status(500).json({ error: 'Server error' });
     }
+  });
+});
+
+// Profile
+app.get('/api/profile', authenticateToken, (req, res) => {
+  db.get(
+    'SELECT id, username, email, created_at FROM users WHERE id = ?',
+    [req.user.userId],
+    (err, user) => {
+      if (err) return res.status(500).json({ error: 'Database error' });
+      res.json(user);
+    }
+  );
+});
+
+// Get all logs with admin info
+app.get('/api/logs', authenticateToken, (req, res) => {
+  const sql = `
+    SELECT l.*, u.username AS admin_username, u.email AS admin_email
+    FROM logs l
+    JOIN users u ON u.id = l.user_id
+    ORDER BY l.timestamp DESC
+  `;
+  db.all(sql, [], (err, rows) => {
+    if (err) return res.status(500).json({ error: 'Failed to fetch logs' });
     res.json(rows);
   });
 });
 
+// CRUD for records with logs
 
+// Get all records
+app.get('/api/records', authenticateToken, (req, res) => {
+  db.all('SELECT * FROM records', [], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
+  });
+});
+
+// Create record + log
 app.post('/api/records', authenticateToken, (req, res) => {
-  const { name, email, department} = req.body;
-
+  const { name, email, department } = req.body;
   if (!name || !email || !department) {
-    return res.status(400).json({ error: 'name, email, and department are required'});
+    return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
   db.run(
     'INSERT INTO records (name, email, department, user_id) VALUES (?, ?, ?, ?)',
     [name, email, department, req.user.userId],
     function (err) {
-      if (err) return res.status(500).json({ error: err.message});
-
+      if (err) return res.status(500).json({ error: err.message });
+      logAction(req.user.userId, name, email, department, 'ADD');
       res.status(201).json({
         id: this.lastID,
         name,
@@ -151,12 +226,12 @@ app.post('/api/records', authenticateToken, (req, res) => {
   );
 });
 
+// Update record + log
 app.put('/api/records/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { name, email, department } = req.body;
-
   if (!name || !email || !department) {
-    return res.status(400).json({ error: 'name, email, and department are required'});
+    return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
   db.run(
@@ -166,180 +241,31 @@ app.put('/api/records/:id', authenticateToken, (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
       if (this.changes === 0) return res.status(404).json({ error: 'Record not found' });
 
+      logAction(req.user.userId, name, email, department, 'EDIT');
       res.json({ id, name, email, department });
     }
   );
 });
 
+// Delete record + log
 app.delete('/api/records/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
 
-  db.run(
-    'DELETE FROM records WHERE id = ? AND user_id = ?',
-    [id, req.user.userId],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
+  // Get record info first (for logs)
+  db.get('SELECT name, email, department FROM records WHERE id = ?', [id], (err, record) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!record) return res.status(404).json({ error: 'Record not found' });
 
-      if (this.changes === 0) {
-        return res.status(404).json({ error: 'Record not found or not authorized' });
+    db.run(
+      'DELETE FROM records WHERE id = ?',
+      [id],
+      function (err2) {
+        if (err2) return res.status(500).json({ error: err2.message });
+        logAction(req.user.userId, record.name, record.email, record.department, 'DELETE');
+        res.status(204).send();
       }
-
-      res.status(204).send();
-    }
-  );
-});
-
-
-// Login endpoint
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required' });
-  }
-
-  db.get(
-    'SELECT * FROM users WHERE username = ?',
-    [username],
-    async (err, user) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      if (!user) {
-        return res.status(401).json({ error: 'Invalid credentials' });
-      }
-
-      try {
-        const isValidPassword = await bcrypt.compare(password, user.password);
-        
-        if (!isValidPassword) {
-          return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign(
-          { userId: user.id, username: user.username },
-          JWT_SECRET,
-          { expiresIn: '24h' }
-        );
-
-        res.json({
-          message: 'Login successful',
-          token,
-          user: { id: user.id, username: user.username, email: user.email }
-        });
-      } catch (error) {
-        res.status(500).json({ error: 'Server error' });
-      }
-    }
-  );
-});
-
-
-
-// Protected route example
-app.get('/api/profile', authenticateToken, (req, res) => {
-  db.get(
-    'SELECT id, username, email, created_at FROM users WHERE id = ?',
-    [req.user.userId],
-    (err, user) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-      res.json(user);
-    }
-  );
-});
-
-// Get all history logs (lusung)
-app.get('/api/logs', authenticateToken, (req, res) => {
-  db.all(`SELECT * FROM logs ORDER BY timestamp DESC`, [], (err, rows) => {
-    if (err) {
-      console.error('Error fetching logs:', err.message);
-      return res.status(500).json({ error: 'Failed to fetch logs' });
-    }
-
-    res.json(rows);
+    );
   });
-});
-
-// Add record and log the ADD action. lusung
-app.post('/api/add-record', authenticateToken, (req, res) => {
-  const { name, department } = req.body;
-  const userId = req.user.userId;
-
-  if (!name || !department) {
-    return res.status(400).json({ error: 'Name and department are required' });
-  }
-
-  db.run(
-    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
-    [userId, name, department, 'ADD'],
-    function (err) {
-      if (err) {
-        console.error('Log insert error:', err.message);
-        return res.status(500).json({ error: 'Database error while logging' });
-      }
-
-      return res.status(201).json({
-        message: 'Record added and log saved',
-        logId: this.lastID,
-      });
-    }
-  );
-});
-
-
-// Edit record and log the EDIT action (lusung)
-app.put('/api/edit-record/:id', authenticateToken, (req, res) => {
-  const { name, department } = req.body;
-  const userId = req.user.userId;
-
-  if (!name || !department) {
-    return res.status(400).json({ error: 'Name and department are required' });
-  }
-
-  db.run(
-    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
-    [userId, name, department, 'EDIT'],
-    function (err) {
-      if (err) {
-        console.error('Log insert error:', err.message);
-        return res.status(500).json({ error: 'Database error while logging' });
-      }
-
-      res.status(200).json({
-        message: 'Record edited and log saved',
-        logId: this.lastID,
-      });
-    }
-  );
-});
-
-// Delete record and log the DELETE action (lusung)
-app.delete('/api/delete-record/:id', authenticateToken, (req, res) => {
-  const { name, department } = req.body;
-  const userId = req.user.userId;
-
-  if (!name || !department) {
-    return res.status(400).json({ error: 'Name and department are required' });
-  }
-
-  db.run(
-    `INSERT INTO logs (user_id, name, department, action) VALUES (?, ?, ?, ?)`,
-    [userId, name, department, 'DELETE'],
-    function (err) {
-      if (err) {
-        console.error('Log insert error:', err.message);
-        return res.status(500).json({ error: 'Database error while logging' });
-      }
-
-      res.status(200).json({
-        message: 'Record deleted and log saved',
-        logId: this.lastID,
-      });
-    }
-  );
 });
 
 app.listen(PORT, '0.0.0.0', () => {

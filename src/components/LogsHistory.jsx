@@ -47,8 +47,10 @@ export default function LogsHistory() {
           <thead>
             <tr>
               <th>ID</th>
-              <th>User ID</th>
-              <th>Name</th>
+              <th>Admin ID</th> {/* this is same with user ID on users tabe */}
+              <th>Admin Name</th>
+              <th>Name</th> {/* Name of the employee */}
+              <th>Email</th>  {/* Email of the employee */}
               <th>Department</th>
               <th>Action</th>
               <th>Timestamp</th>
@@ -59,7 +61,9 @@ export default function LogsHistory() {
               <tr key={log.id}>
                 <td>{log.id}</td>
                 <td>{log.user_id}</td>
-                <td>{log.name}</td>
+                <td>{log.admin_username}</td>
+                <td>{log.employee_name}</td>
+                <td>{log.employee_email}</td>
                 <td>{log.department}</td>
                 <td>{log.action}</td>
                 <td>{log.timestamp}</td>
