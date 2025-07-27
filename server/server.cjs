@@ -113,7 +113,7 @@ app.post('/api/register', async (req, res) => {
     db.run(
       'INSERT INTO users (username, email, password) VALUES (?, ?, ?)',
       [username, email, hashedPassword],
-      function  (err) {
+      function (err) {
         if (err) {
           if (err.message.includes('UNIQUE constraint failed')) {
             return res.status(400).json({ error: 'Username or email already exists' });
@@ -121,9 +121,7 @@ app.post('/api/register', async (req, res) => {
           return res.status(500).json({ error: 'Database error' });
         }
 
-
         const token = jwt.sign({ userId: this.lastID, username }, JWT_SECRET, { expiresIn: '24h' });
-        res.status(201).json({
         res.status(201).json({
           message: 'User created successfully',
           token,
@@ -209,7 +207,6 @@ app.post('/api/records', authenticateToken, (req, res) => {
   const { name, email, department } = req.body;
   if (!name || !email || !department) {
     return res.status(400).json({ error: 'name, email, and department are required' });
-    return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
   db.run(
@@ -234,7 +231,6 @@ app.put('/api/records/:id', authenticateToken, (req, res) => {
   const { id } = req.params;
   const { name, email, department } = req.body;
   if (!name || !email || !department) {
-    return res.status(400).json({ error: 'name, email, and department are required' });
     return res.status(400).json({ error: 'name, email, and department are required' });
   }
 
