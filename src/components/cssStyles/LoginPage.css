@@ -1,80 +1,205 @@
+.login-page-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: radial-gradient(circle at top left, #294372, #46339e);
+  font-family: 'Segoe UI', sans-serif;
+  color: #fff;
+}
+
+.login-card {
+  background: rgba(7, 20, 48, 0.904);
+  padding: 40px;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+.login-card h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 400;
+  font-size: 1.8rem;
+}
+
+.input-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+}
+
+.input-row label {
+  margin-bottom: 6px;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-row input {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  background-color: #2a314a;
+  color: #fff;
+}
+
+.input-row input:focus {
+  outline: 2px solid #764ba2;
+}
+
+.icon-left {
+  color: #aaa;
+}
+
+.login-btn {
+  background-color: #4788c5;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  width: 100%;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.login-btn:hover {
+  background-color: #2d3b8a;
+}
+
+.secondary-btn {
+  margin-top: 12px;
+  background: none;
+  border: 1px solid #fff;
+  color: #fff;
+  padding: 10px;
+  width: 100%;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondary-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.login-links {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #ddd;
+  text-decoration: underline;
+  cursor: pointer;
+  margin-top: 5px;
+  font-size: 14px;
+  padding: 5px;
+}
+
+.link-btn:hover {
+  color: #fff;
+}
 
 .login-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  height: 100vh;
+  background-color: #2f2a75; 
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .login-card {
-  background: white;
-  padding: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  background-color: #132b50; 
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
   width: 100%;
   max-width: 400px;
+  color: #e2e8f0;
+  box-sizing: border-box;
 }
 
 .login-card h2 {
   text-align: center;
-  margin-bottom: 1.5rem;
-  color: #333;
+  margin-bottom: 20px;
+  color: #f1f5f9;
 }
 
+
 .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: 15px;
 }
+
 
 .form-group label {
   display: block;
-  margin-bottom: 0.5rem;
-  color: #555;
-  font-weight: 500;
+  margin-bottom: 6px;
+  font-size: 14px;
+  color: #cbd5e1;
 }
+
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 1rem;
-  box-sizing: border-box;
+  padding: 10px;
+  border: none;
+  border-radius: 6px;
+  background-color: #334155;
+  color: #f8fafc;
 }
 
-.form-group input:focus {
-  outline: none;
-  border-color: #667eea;
+.form-group input::placeholder {
+  color: #94a3b8;
 }
+
 
 .login-submit-btn {
   width: 100%;
-  background: #667eea;
+  padding: 12px;
+  background-color: #3b82f6;
   color: white;
   border: none;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border-radius: 5px;
+  border-radius: 6px;
   cursor: pointer;
-  margin-bottom: 1rem;
+  font-weight: bold;
+  margin-top: 10px;
+  transition: background-color 0.2s;
 }
 
 .login-submit-btn:hover {
-  background: #5a6fd8;
+  background-color: #2563eb;
 }
 
-.back-btn {
-  width: 100%;
-  background: transparent;
-  color: #667eea;
-  border: 1px solid #667eea;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border-radius: 5px;
+
+.login-links {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #60a5fa;
+  text-decoration: underline;
   cursor: pointer;
+  display: block;
+  margin-top: 6px;
+  font-size: 14px;
 }
 
-.back-btn:hover {
-  background: #667eea;
-  color: white;
+.link-btn:hover {
+  color: #93c5fd;
 }
+

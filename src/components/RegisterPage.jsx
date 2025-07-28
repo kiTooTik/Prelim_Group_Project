@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import './cssStyles/LoginPage.css';
+import './cssStyles/LoginPage.css'; // using same styles as LoginPage
 
 export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
   const [formData, setFormData] = useState({
@@ -12,7 +11,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
@@ -21,9 +20,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
     try {
       const response = await fetch(`${window.location.protocol}//${window.location.hostname}:5000/api/register`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
@@ -46,10 +43,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
   };
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
@@ -63,6 +57,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
               type="text"
               id="username"
               name="username"
+              placeholder="Enter your username"
               value={formData.username}
               onChange={handleChange}
               required
@@ -74,6 +69,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
               type="email"
               id="email"
               name="email"
+              placeholder="Enter your email"
               value={formData.email}
               onChange={handleChange}
               required
@@ -85,6 +81,7 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
               type="password"
               id="password"
               name="password"
+              placeholder="Enter a password"
               value={formData.password}
               onChange={handleChange}
               required
@@ -96,17 +93,24 @@ export default function RegisterPage({ onRegister, onBack, onSwitchToLogin }) {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              placeholder="Confirm your password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
             />
           </div>
+
           <button type="submit" className="login-submit-btn">Register</button>
         </form>
-        <button className="back-btn" onClick={onSwitchToLogin}>
-          Already have an account? Login
-        </button>
-        <button className="back-btn" onClick={onBack}>Back to Home</button>
+
+        <div className="login-links">
+          <button className="link-btn" onClick={onSwitchToLogin}>
+            Already have an account? Login
+          </button>
+          <button className="link-btn" onClick={onBack}>
+            Back to Home
+          </button>
+        </div>
       </div>
     </div>
   );

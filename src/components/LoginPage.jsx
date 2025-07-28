@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import './cssStyles/LoginPage.css';
 
@@ -10,7 +9,7 @@ export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       const response = await fetch(`${window.location.protocol}//${window.location.hostname}:5000/api/login`, {
         method: 'POST',
@@ -23,7 +22,6 @@ export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token in localStorage
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
         onLogin(data.user.username);
@@ -43,12 +41,15 @@ export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-page-container">
       <div className="login-card">
         <h2>Login to Dashboard</h2>
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username:</label>
+          <div className="input-row">
+            <label htmlFor="username">
+              <i className="fas fa-user icon-left" />
+              Username:
+            </label>
             <input
               type="text"
               id="username"
@@ -58,8 +59,11 @@ export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="password">Password:</label>
+          <div className="input-row">
+            <label htmlFor="password">
+              <i className="fas fa-lock icon-left" />
+              Password:
+            </label>
             <input
               type="password"
               id="password"
@@ -69,12 +73,12 @@ export default function LoginPage({ onLogin, onBack, onSwitchToRegister }) {
               required
             />
           </div>
-          <button type="submit" className="login-submit-btn">Login</button>
+          <button type="submit" className="login-btn">Login</button>
         </form>
-        <button className="back-btn" onClick={onSwitchToRegister}>
-          Don't have an account? Register
+        <button className="secondary-btn" onClick={onSwitchToRegister}>
+          Don’t have an account? Register
         </button>
-        <button className="back-btn" onClick={onBack}>Back to Home</button>
+        <button className="secondary-btn" onClick={onBack}>Back to Home</button>
       </div>
     </div>
   );
