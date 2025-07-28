@@ -15,7 +15,11 @@ export default function Dashboard({ user, onLogout }) {
   const [records, setRecords] = useState([]);
   const [editingRecord, setEditingRecord] = useState(null);
 
-  // Fetch records
+  // SHARED AVATAR STATE
+  const [avatarId, setAvatarId] = useState(() =>
+    JSON.parse(localStorage.getItem('user') || '{}')?.avatar || 'male'
+  );
+
   const fetchRecords = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -43,13 +47,19 @@ export default function Dashboard({ user, onLogout }) {
       case 'add':
         return <AddRecord onRecordAdded={fetchRecords} />;
       case 'edit':
-        return <EditRecord record={editingRecord} onRecordUpdated={fetchRecords} onCancel={() => setCurrentView('report')} />;
+        return (
+          <EditRecord
+            record={editingRecord}
+            onRecordUpdated={fetchRecords}
+            onCancel={() => setCurrentView('report')}
+          />
+        );
       case 'delete':
         return <DeleteRecord records={records} onRecordDeleted={fetchRecords} />;
       case 'logs':
         return <LogsHistory />;
       case 'settings':
-        return <SettingsPage/>;
+        return <SettingsPage onAvatarChange={setAvatarId} />;
       case 'report':
       default:
         return <ReportPage records={records} onEdit={handleEdit} />;
@@ -63,10 +73,9 @@ export default function Dashboard({ user, onLogout }) {
         onViewChange={setCurrentView}
         user={user}
         onLogout={onLogout}
+        avatarId={avatarId}
       />
-      <div className="dashboard-content">
-        {renderContent()}
-      </div>
+      <div className="dashboard-content">{renderContent()}</div>
     </div>
   );
 }

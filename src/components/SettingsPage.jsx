@@ -3,7 +3,7 @@ import './cssStyles/SettingsPage.css';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
 
-export default function SettingsPage() {
+export default function SettingsPage({ onAvatarChange }) {
   const [userProfile, setUserProfile] = useState({
     username: '',
     email: '',
@@ -35,7 +35,7 @@ export default function SettingsPage() {
     { id: 'superhero', emoji: '🦸', category: 'Other', name: 'Superhero' },
     { id: 'ghost', emoji: '👻', category: 'Other', name: 'Ghost' },
     { id: 'unicorn', emoji: '🦄', category: 'Other', name: 'Unicorn' },
-    { id: 'dragon', emoji: '🐉', category: 'Othes', name: 'Dragon' }
+    { id: 'dragon', emoji: '🐉', category: 'Other', name: 'Dragon' }
   ];
 
   useEffect(() => {
@@ -44,9 +44,7 @@ export default function SettingsPage() {
 
   const fetchUserProfile = async () => {
     try {
-      const token = localStorage.getItem('token');
       const savedUser = localStorage.getItem('user');
-      
       if (savedUser) {
         const userData = JSON.parse(savedUser);
         setUserProfile({
@@ -64,31 +62,24 @@ export default function SettingsPage() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setUserProfile(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setUserProfile((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAvatarSelect = (avatarId) => {
-    setUserProfile(prev => ({
-      ...prev,
-      avatar: avatarId
-    }));
+    setUserProfile((prev) => ({ ...prev, avatar: avatarId }));
+    onAvatarChange(avatarId); // live update
   };
 
   const handleSaveProfile = async () => {
     setLoading(true);
     setMessage('');
-    
     try {
-      const token = localStorage.getItem('token');
       const updatedUser = {
         ...JSON.parse(localStorage.getItem('user') || '{}'),
         ...userProfile
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+      onAvatarChange(userProfile.avatar); // refresh-safe
       setMessage('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
@@ -101,22 +92,20 @@ export default function SettingsPage() {
 
   const handleCancel = () => {
     setIsEditing(false);
-    fetchUserProfile(); 
+    fetchUserProfile();
   };
 
-  const getAvatarsByCategory = (category) => {
-    return avatarOptions.filter(avatar => avatar.category === category);
-  };
+  const getAvatarsByCategory = (category) =>
+    avatarOptions.filter((avatar) => avatar.category === category);
 
-  const getSelectedAvatar = () => {
-    return avatarOptions.find(avatar => avatar.id === userProfile.avatar) || avatarOptions[0];
-  };
+  const getSelectedAvatar = () =>
+    avatarOptions.find((avatar) => avatar.id === userProfile.avatar) || avatarOptions[0];
 
   return (
     <div className="settings-page">
       <div className="settings-container">
         <h2>Account Settings</h2>
-        
+
         {message && (
           <div className={`message ${message.includes('success') ? 'success' : 'error'}`}>
             {message}
@@ -125,7 +114,6 @@ export default function SettingsPage() {
 
         <div className="profile-section">
           <h3>Profile Information</h3>
-          
           <div className="profile-form">
             <div className="form-group">
               <label>Username</label>
@@ -179,7 +167,6 @@ export default function SettingsPage() {
 
         <div className="avatar-section">
           <h3>Choose Your Avatar</h3>
-          
           <div className="current-avatar">
             <span className="avatar-display">{getSelectedAvatar().emoji}</span>
             <span className="avatar-name">{getSelectedAvatar().name}</span>
@@ -187,14 +174,16 @@ export default function SettingsPage() {
 
           {isEditing && (
             <div className="avatar-selection">
-              {['Default', 'Animal', 'Other'].map(category => (
+              {['Default', 'Animal', 'Other'].map((category) => (
                 <div key={category} className="avatar-category">
                   <h4>{category}s</h4>
                   <div className="avatar-grid">
-                    {getAvatarsByCategory(category).map(avatar => (
+                    {getAvatarsByCategory(category).map((avatar) => (
                       <button
                         key={avatar.id}
-                        className={`avatar-option ${userProfile.avatar === avatar.id ? 'selected' : ''}`}
+                        className={`avatar-option ${
+                          userProfile.avatar === avatar.id ? 'selected' : ''
+                        }`}
                         onClick={() => handleAvatarSelect(avatar.id)}
                         disabled={!isEditing}
                         title={avatar.name}
@@ -212,22 +201,19 @@ export default function SettingsPage() {
 
         <div className="settings-actions">
           {!isEditing ? (
-            <button 
-              className="edit-btn"
-              onClick={() => setIsEditing(true)}
-            >
+            <button className="edit-btn" onClick={() => setIsEditing(true)}>
               ✏️ Edit Profile
             </button>
           ) : (
             <div className="edit-actions">
-              <button 
+              <button
                 className="save-btn"
                 onClick={handleSaveProfile}
                 disabled={loading}
               >
                 {loading ? '💾 Saving...' : '💾 Save Changes'}
               </button>
-              <button 
+              <button
                 className="cancel-btn"
                 onClick={handleCancel}
                 disabled={loading}
