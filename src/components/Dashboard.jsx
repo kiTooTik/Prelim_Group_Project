@@ -5,6 +5,7 @@ import AddRecord from './AddRecord';
 import EditRecord from './EditRecord';
 import DeleteRecord from './DeleteRecord';
 import LogsHistory from './LogsHistory';
+import SettingsPage from './SettingsPage';
 import './cssStyles/Dashboard.css';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000`;
@@ -47,6 +48,8 @@ export default function Dashboard({ user, onLogout }) {
         return <DeleteRecord records={records} onRecordDeleted={fetchRecords} />;
       case 'logs':
         return <LogsHistory />;
+      case 'settings':
+        return <SettingsPage/>;
       case 'report':
       default:
         return <ReportPage records={records} onEdit={handleEdit} />;
