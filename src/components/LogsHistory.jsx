@@ -46,7 +46,7 @@ export default function LogsHistory() {
         <table className="logs-table">
           <thead>
             <tr>
-              <th>ID</th>
+              <th>Log ID</th>
               <th>Admin ID</th> {/* this is same with user ID on users tabe */}
               <th>Admin Name</th>
               <th>Name</th> {/* Name of the employee */}
