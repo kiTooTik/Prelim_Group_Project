@@ -15,6 +15,21 @@
 .sidebar-header {
   padding: 1.5rem;
   border-bottom: 1px solid #34495e;
+  text-align: center;
+}
+
+.user-avatar {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem auto;
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .sidebar-header h3 {
